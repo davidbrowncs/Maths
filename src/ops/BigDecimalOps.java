@@ -51,7 +51,14 @@ public class BigDecimalOps {
 			+ "823998433525743549956085025660897833955642114948073393626075102381833141100470890395013433029"
 			+ "741347484054061587753968883815407698017767303699910749246978478431284303641128920280122725634"
 			+ "68391623354787727340063958657179819069358127");
-	
+
+	private static final BigDecimal[] factorials = new BigDecimal[21];
+	static {
+		for (int i = 0; i < factorials.length; i++) {
+			factorials[i] = factorial(i);
+		}
+	}
+
 	public static BigDecimal factorial(int n) {
 		if (n < 0) {
 			throw new IllegalArgumentException(Integer.toString(n));
@@ -65,7 +72,8 @@ public class BigDecimalOps {
 
 	public static BigDecimal pow(BigDecimal val, long n) {
 		if (n < 0) {
-			return BigDecimal.ONE.divide(pow(val, -n), 300, RoundingMode.HALF_UP);
+			BigDecimal tmp = pow(val, -n);
+			return BigDecimal.ONE.divide(tmp, tmp.scale(), RoundingMode.HALF_UP);
 		} else if (n == 0) {
 			return BigDecimal.ONE;
 		}
@@ -84,8 +92,28 @@ public class BigDecimalOps {
 		}
 	}
 
+	public static BigDecimal pow(BigDecimal val, double n) {
+		return pow(val, n, 50);
+	}
+
+	public static BigDecimal pow(BigDecimal val, double n, int scale) {
+		if (n == 0) {
+			return BigDecimal.ONE;
+		}
+		BigDecimal integerPart = pow(val, (long) n);
+		int expansions = 20;
+		n -= (long) n;
+		BigDecimal logVal = logWithScale(val, scale).multiply(new BigDecimal(n)).setScale(scale, RoundingMode.HALF_UP);
+		BigDecimal previous = logVal;
+		BigDecimal result = BigDecimal.ONE;
+		for (int i = 1; i < expansions; i++, previous = previous.multiply(logVal)) {
+			result = result.add(previous.multiply(BigDecimal.ONE.divide(factorials[i], scale, RoundingMode.HALF_UP)));
+		}
+		return integerPart.multiply(result).setScale(scale, RoundingMode.HALF_UP);
+	}
+
 	public static void main(String[] args) {
-		System.out.println(log(new BigDecimal(123.3123)));
+		System.out.println(log(new BigDecimal(31.123321)));
 	}
 
 	public static BigDecimal log(BigDecimal val, int scale, int iterations) {
@@ -100,7 +128,7 @@ public class BigDecimalOps {
 			int twoCount = 0;
 			BigDecimal divided = val;
 			do {
-				divided = divided.divide(TWO, scale, RoundingMode.HALF_EVEN);
+				divided = divided.divide(TWO, scale, RoundingMode.HALF_UP);
 				twoCount++;
 			} while (divided.compareTo(TWO) > 0);
 			return LOG_TWO.multiply(new BigDecimal(twoCount)).add(log(divided, scale, iterations));
@@ -111,13 +139,18 @@ public class BigDecimalOps {
 		BigDecimal result = BigDecimal.ZERO;
 		BigDecimal valSquared = fraction.multiply(fraction);
 		BigDecimal previous = fraction;
-		for (int i = 1; i < iterations * 2; i += 2) {
+		int lim = iterations * 2;
+		for (int i = 1; i < lim; i += 2) {
 			BigDecimal tmp = previous;
-			tmp = tmp.divide(new BigDecimal(i), scale, RoundingMode.HALF_EVEN);
+			tmp = tmp.divide(new BigDecimal(i), scale, RoundingMode.HALF_UP);
 			result = result.add(tmp);
 			previous = previous.multiply(valSquared);
 		}
-		return TWO.multiply(result);
+		return TWO.multiply(result).setScale(scale, RoundingMode.HALF_UP);
+	}
+
+	public static BigDecimal logWithScale(BigDecimal val, int scale) {
+		return log(val, scale, 50);
 	}
 
 	public static BigDecimal log(BigDecimal val, int base, int scale, int iterations) {
@@ -133,6 +166,6 @@ public class BigDecimalOps {
 	}
 
 	public static BigDecimal log(BigDecimal val) {
-		return log(val, 50, 200);
+		return log(val, 50, 50);
 	}
 }

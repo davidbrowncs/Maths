@@ -62,7 +62,7 @@ public final class ComplexDouble implements Complex<Double> {
 		}
 		ComplexDouble integerPart = pow((long) num);
 		int expansions = factorials.length;
-		num -= (int) num;
+		num -= (long) num;
 		ComplexDouble logVal = log().scalarMultiply(num);
 		ComplexDouble previous = logVal;
 		ComplexDouble result = IDENTITY;
